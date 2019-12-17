@@ -10,12 +10,13 @@
     <Company>invensys.za</Company>
     <Product>library.common</Product>
     <Authors>ulbrich frauendorf</Authors>
-    <Description>Common libraries to handle logging, exceptions and file manipulation</Description>
+    <Description>Common libraries to simplify microsoft interop development</Description>
     <Copyright>@2019</Copyright>
     <RepositoryUrl>https://UlbrichFrauendorf@dev.azure.com/UlbrichFrauendorf/invensyslib/_git/invensyslib</RepositoryUrl>
     <RepositoryType>Public</RepositoryType>
-    <PackageTags>Logging, Exception, Files</PackageTags>
+    <PackageTags>Excel, Exchange, AzureAD</PackageTags>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <Version>1.0.0.2</Version>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">

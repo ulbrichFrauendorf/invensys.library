@@ -1,12 +1,7 @@
 ﻿using library.common;
 using Microsoft.Office.Interop.Excel;
 using System;
-using System.Collections.Generic;
-using System.Data;
 using System.IO;
-using System.Runtime.InteropServices;
-using DataTable = System.Data.DataTable;
-using Range = Microsoft.Office.Interop.Excel.Range;
 
 namespace library.microsofthelper.MsExcel
 {
@@ -14,6 +9,10 @@ namespace library.microsofthelper.MsExcel
 	{
 		public Application ExcelApplication { get; private set; }
 		public Workbook Workbook { get; private set; }
+		internal Workbooks ExcelWorkbooks { get; set; }
+		public Sheets Worksheets { get; set; }
+		private string xSaveName;
+
 
 		public ExcelWorkbook(string filename, string password = "")
 		{
@@ -22,11 +21,12 @@ namespace library.microsofthelper.MsExcel
 				DisplayAlerts = false
 			};
 
+			ExcelWorkbooks = ExcelApplication.Workbooks;
 			if (File.Exists(filename))
 			{
 				try
 				{
-					Workbook = ExcelApplication.Application.Workbooks.Open(Filename: filename, ReadOnly: false, Password: password);
+					Workbook = ExcelWorkbooks.Open(Filename: filename, UpdateLinks: false, ReadOnly: false, Password: password);
 				}
 				catch (Exception ex)
 				{
@@ -37,8 +37,11 @@ namespace library.microsofthelper.MsExcel
 			{
 				try
 				{
-					Workbook = ExcelApplication.Application.Workbooks.Add(XlWBATemplate.xlWBATWorksheet);
+					Workbook = ExcelWorkbooks.Add(XlWBATemplate.xlWBATWorksheet);
 					Save(filename, true, password);
+					Workbook.Close();
+					Cleanup.ReleaseObject(Workbook);
+					Workbook = ExcelWorkbooks.Open(Filename: xSaveName, UpdateLinks: false, ReadOnly: false, Password: password);
 				}
 				catch (Exception ex)
 				{
@@ -46,16 +49,16 @@ namespace library.microsofthelper.MsExcel
 				}
 			}
 
+			Worksheets = Workbook.Worksheets;
 		}
 		public string Save(string filename, bool savePopupFlag = true, string password = "")
 		{
 			string fileExt = Path.GetExtension(filename);
-			string xSaveName;
 			if (savePopupFlag)
 			{
-				Workbook.Application.DisplayAlerts = true;
-				xSaveName = Workbook.Application.GetSaveAsFilename(Path.GetFileNameWithoutExtension(filename), "Excel Workbook (*" + fileExt + "), *" + fileExt);
-				Workbook.Application.DisplayAlerts = false;
+				ExcelApplication.DisplayAlerts = true;
+				xSaveName = ExcelApplication.GetSaveAsFilename(Path.GetFileNameWithoutExtension(filename), "Excel Workbook (*" + fileExt + "), *" + fileExt);
+				ExcelApplication.DisplayAlerts = false;
 			}
 			else
 			{
@@ -73,9 +76,13 @@ namespace library.microsofthelper.MsExcel
 				".txt" => XlFileFormat.xlTextWindows,
 				_ => XlFileFormat.xlWorkbookDefault,
 			};
-			Workbook.Application.DisplayAlerts = false;
+			ExcelApplication.DisplayAlerts = false;
 			Workbook.SaveAs(Filename: xSaveName, FileFormat: fileFormat, CreateBackup: false, Password: password, ConflictResolution: XlSaveConflictResolution.xlLocalSessionChanges);
 			return xSaveName;
+		}
+		public void Save()
+		{
+			Workbook.Save();
 		}
 
 		#region IDisposable Support
@@ -86,14 +93,12 @@ namespace library.microsofthelper.MsExcel
 			{
 				if (disposing)
 				{
+					Cleanup.ReleaseObject(Worksheets);
 					Workbook.Close(0);
+					Cleanup.ReleaseObject(Workbook);
+					Cleanup.ReleaseObject(ExcelWorkbooks);
 					ExcelApplication.Quit();
-					Marshal.ReleaseComObject(Workbook);
-					Marshal.ReleaseComObject(ExcelApplication);
-					Workbook = null;
-					ExcelApplication = null;
-					GC.Collect();
-					GC.WaitForPendingFinalizers();
+					Cleanup.ReleaseObject(ExcelApplication);
 				}
 				disposedValue = true;
 			}

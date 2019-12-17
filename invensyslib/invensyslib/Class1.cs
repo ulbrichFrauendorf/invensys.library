@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace invensyslib
+﻿namespace invensyslib
 {
 	public class Class1
 	{

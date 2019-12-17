@@ -3,31 +3,38 @@ using Microsoft.Office.Interop.Excel;
 using System;
 using System.Collections.Generic;
 using System.Data;
-using System.IO;
 using System.Runtime.InteropServices;
 using DataTable = System.Data.DataTable;
 using Range = Microsoft.Office.Interop.Excel.Range;
 
 namespace library.microsofthelper.MsExcel
 {
-	public class ExcelSheet : IDisposable
+	public class ExcelSheet: ExcelWorkbook
 	{
 		public Worksheet Worksheet { get; set; }
-		public ExcelSheet(Workbook workbook, string sheetName)
+
+		public ExcelSheet(string fileName, string sheetName): base(fileName)
 		{
-			if (SheetExists(workbook, sheetName))
+			if (SheetExists(sheetName))
 			{
-				Worksheet = workbook.Worksheets[sheetName];
+				Worksheet = Worksheets[sheetName];
 				return;
 			}
 
-			Sheets xlSheets = workbook.Worksheets;
-			Worksheet = xlSheets.Add(After: workbook.Sheets[workbook.Sheets.Count]);
+			Worksheet = Worksheets.Add();
 			Worksheet.Name = sheetName;
 		}
 		public void Delete() => Worksheet.Delete();
 
-		public Range SetRange(int row1, int column1, int row2, int column2) => Worksheet.Range[(Range)Worksheet.Cells[row1, column1], (Range)Worksheet.Cells[row2, column2]];
+		public Range SetRange(int row1, int column1, int row2, int column2)
+		{
+			Range cell1 = (Range)Worksheet.Cells[row1, column1];
+			Range cell2 = (Range)Worksheet.Cells[row2, column2];
+			Range retRange = Worksheet.Range[cell1, cell2];
+			Cleanup.ReleaseObject(cell1);
+			Cleanup.ReleaseObject(cell2);
+			return retRange;
+		}
 		public Range GetUsedRange()
 		{
 			int lastRow = 1;
@@ -50,34 +57,46 @@ namespace library.microsofthelper.MsExcel
 		{
 			Range searchRange = SetRange(1, searchColumn, Worksheet.Rows.Count, searchColumn);
 			Range lastCell = searchRange.Find(What: "*", After: Worksheet.Cells[1, searchColumn], LookIn: XlFindLookIn.xlFormulas, LookAt: XlLookAt.xlWhole, SearchDirection: XlSearchDirection.xlPrevious, MatchCase: true);
-			return lastCell == null ? 1 : lastCell.Row;
+			int retInt = lastCell == null ? 1 : lastCell.Row;
+			Cleanup.ReleaseObject(lastCell);
+			Cleanup.ReleaseObject(searchRange);
+			return retInt;
 		}
 		public int FindLastUsedColumn(int searchRow = 1)
 		{
 			Range searchRange = SetRange(searchRow, 1, searchRow, Worksheet.Columns.Count);
 			Range lastCell = searchRange.Find(What: "*", After: Worksheet.Cells[searchRow, 1], LookIn: XlFindLookIn.xlFormulas, LookAt: XlLookAt.xlWhole, SearchDirection: XlSearchDirection.xlPrevious, MatchCase: true);
-			return lastCell == null ? 1 : lastCell.Column;
+			int retInt = lastCell == null ? 1 : lastCell.Column;
+			Cleanup.ReleaseObject(lastCell);
+			Cleanup.ReleaseObject(searchRange);
+			return retInt;
 		}
 		public int FindDataColumn(string findString, int searchRow = 1, int startColumn = 1)
 		{
-			if (findString == "")
+			if (string.IsNullOrEmpty(findString))
 				return 0;
 			Range searchRange = SetRange(searchRow, 1, searchRow, Worksheet.Columns.Count);
 			Range foundCell = searchRange.Find(What: findString, After: Worksheet.Cells[searchRow, startColumn], LookIn: XlFindLookIn.xlFormulas, LookAt: XlLookAt.xlWhole, SearchDirection: XlSearchDirection.xlPrevious, MatchCase: true);
-			return foundCell == null ? 0 : foundCell.Column;
+			int retInt = foundCell == null ? 0 : foundCell.Column;
+			Cleanup.ReleaseObject(foundCell);
+			Cleanup.ReleaseObject(searchRange);
+			return retInt;
 		}
 		public int FindDataRow(string findString, int searchColumn = 1, int startRow = 1)
 		{
-			if (findString == "")
+			if (string.IsNullOrEmpty(findString))
 				return 0;
 			Range searchRange = SetRange(1, searchColumn, Worksheet.Rows.Count, searchColumn);
 			Range foundCell = searchRange.Find(What: findString, After: Worksheet.Cells[startRow, searchColumn], LookIn: XlFindLookIn.xlFormulas, LookAt: XlLookAt.xlWhole, SearchDirection: XlSearchDirection.xlPrevious, MatchCase: true);
-			return foundCell == null ? 0 : foundCell.Row;
+			int retInt = foundCell == null ? 0 : foundCell.Row;
+			Cleanup.ReleaseObject(foundCell);
+			Cleanup.ReleaseObject(searchRange);
+			return retInt;
 		}
 		public int[] FindDataRows(string findString, int searchColumn = 1)
 		{
 			List<int> retList = new List<int>();
-			if (findString == "")
+			if (string.IsNullOrEmpty(findString))
 				return null;
 
 			Range searchRange = SetRange(1, searchColumn, Worksheet.Rows.Count, searchColumn);
@@ -94,14 +113,17 @@ namespace library.microsofthelper.MsExcel
 
 				if (currentFind.get_Address() == firstFind.get_Address())
 					break;
-
 			}
+			Cleanup.ReleaseObject(currentFind);
+			Cleanup.ReleaseObject(firstFind);
+			Cleanup.ReleaseObject(searchRange);
+
 			return retList.ToArray();
-		}
+		} 
 		public int[] FindDataColumns(string findString, int searchRow = 1)
 		{
 			List<int> retList = new List<int>();
-			if (findString == "")
+			if (string.IsNullOrEmpty(findString))
 				return null;
 
 			Range searchRange = SetRange(searchRow, 1, searchRow, Worksheet.Columns.Count);
@@ -118,19 +140,25 @@ namespace library.microsofthelper.MsExcel
 
 				if (currentFind.get_Address() == firstFind.get_Address())
 					break;
-
 			}
+			Cleanup.ReleaseObject(currentFind);
+			Cleanup.ReleaseObject(firstFind);
+			Cleanup.ReleaseObject(searchRange);
+
 			return retList.ToArray();
 		}
 
 		public DataTable WriteExcelSheetToDataTable()
 		{
 			Range range = GetUsedRange();
+			Range tempRange = null;
 			DataTable dt = new DataTable();
 			//Add Headers
 			for (int i = 1; i <= range.Columns.Count; i++)
 			{
-				dynamic colname = ((Range)range.Cells[1, i]).Value;
+				tempRange = ((Range)range.Cells[1, i]);
+				dynamic colname = tempRange.Value;
+				Cleanup.ReleaseObject(tempRange);
 				dt.Columns.Add(colname);
 			}
 			//Body
@@ -139,51 +167,34 @@ namespace library.microsofthelper.MsExcel
 				DataRow dr = dt.NewRow();
 				for (int i = 1; i <= range.Columns.Count; i++)
 				{
-					dr[i - 1] = ((Range)range.Cells[j, i]).Value;
+					tempRange = ((Range)range.Cells[j, i]);
+					dr[i - 1] = tempRange.Value;
+					Cleanup.ReleaseObject(tempRange);
 				}
 				dt.Rows.Add(dr);
 			}
-			Marshal.ReleaseComObject(range);
-			range = null;
+			Cleanup.ReleaseObject(range);
 			return dt;
 		}
-		public void WriteDatatableToRange(int row, int col, DataTable dataTable) => WriteArrayToRange(row, col, dataTable.ToArray());
-		public void WriteArrayToRange(int row, int col, object[,] dataArr) => SetRange(row, col, dataArr.GetLength(0) + row - 1, dataArr.GetLength(1) + col - 1).set_Value(Type.Missing, dataArr);
-
-		//public string SaveAsWorkbook(string saveName, bool savePopupFlag = true, string password = "")
-		//{
-		//	Workbook wb = Worksheet.Application.Workbooks.Add();
-		//	wb.Application.DisplayAlerts = false;
-		//	Worksheet.Copy(Before: wb.Sheets[1]);
-		//	((Worksheet)wb.Sheets[2]).Delete();
-		//	wb.Application.DisplayAlerts = true;
-		//	string fileExt = Path.GetExtension(saveName);
-		//	var xSaveName = wb.Application.GetSaveAsFilename(Path.GetFileNameWithoutExtension(saveName), "Excel Workbook (*" + fileExt + "), *" + fileExt);
-		//	wb.Application.DisplayAlerts = false;
-		//	XlFileFormat fileFormat = fileExt switch
-		//	{
-		//		".xlsx" => XlFileFormat.xlOpenXMLWorkbook,
-		//		".xlsm" => XlFileFormat.xlOpenXMLWorkbookMacroEnabled,
-		//		".xls" => XlFileFormat.xlExcel8,
-		//		".csv" => XlFileFormat.xlCSV,
-		//		".txt" => XlFileFormat.xlTextWindows,
-		//		_ => XlFileFormat.xlWorkbookDefault,
-		//	};
-		//	wb.Application.DisplayAlerts = true;
-		//	wb.SaveAs(Filename: xSaveName, FileFormat: fileFormat, CreateBackup: false, Password: password, ConflictResolution: XlSaveConflictResolution.xlLocalSessionChanges);
-
-		//	wb.Close();
-		//	Marshal.ReleaseComObject(wb);
-		//	return xSaveName;
-		//}
+		public void WriteDatatableToRange(int row, int col, DataTable dataTable) => WriteArrayToExcelSheet(row, col, dataTable.ToArray());
+		public void WriteArrayToExcelSheet(int row, int col, object[,] dataArr)
+		{
+			Range range = SetRange(row, col, dataArr.GetLength(0) + row - 1, dataArr.GetLength(1) + col - 1);
+			range.set_Value(Type.Missing, dataArr);
+			Cleanup.ReleaseObject(range);
+		}
 
 		#region Private Methods
-		private static bool SheetExists(Workbook workbook, string sheetName)
+		private bool SheetExists(string sheetName)
 		{
-			foreach (Worksheet sht in workbook.Worksheets)
+			foreach (Worksheet sht in Worksheets)
 			{
 				if (sht.Name == sheetName)
+				{
+					Cleanup.ReleaseObject(sht);
 					return true;
+				}
+				Cleanup.ReleaseObject(sht);
 			}
 			return false;
 		}
@@ -191,24 +202,24 @@ namespace library.microsofthelper.MsExcel
 
 		#region IDisposable Support
 		private bool disposedValue = false; // To detect redundant calls
-		protected virtual void Dispose(bool disposing)
+		protected override void Dispose(bool disposing)
 		{
 			if (!disposedValue)
 			{
 				if (disposing)
 				{
-					Marshal.ReleaseComObject(Worksheet);
-					Worksheet = null;
 					GC.Collect();
+					Cleanup.ReleaseObject(Worksheet);
+					Cleanup.ReleaseObject(Worksheets);
+					Workbook.Close(0);
+					Cleanup.ReleaseObject(Workbook);
+					Cleanup.ReleaseObject(ExcelWorkbooks);
+					ExcelApplication.Quit();
+					Cleanup.ReleaseObject(ExcelApplication);
 					GC.WaitForPendingFinalizers();
 				}
 				disposedValue = true;
 			}
-		}
-		public void Dispose()
-		{
-			Dispose(true);
-			GC.SuppressFinalize(this);
 		}
 		#endregion
 	}

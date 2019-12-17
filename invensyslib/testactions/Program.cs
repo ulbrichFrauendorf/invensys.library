@@ -1,5 +1,4 @@
-﻿using library.microsofthelper;
-using library.microsofthelper.MsExcel;
+﻿using library.microsofthelper.MsExcel;
 using System;
 using System.Data;
 using Range = Microsoft.Office.Interop.Excel.Range;
@@ -8,36 +7,34 @@ namespace testactions
 {
 	internal class Program
 	{
-		private static void Main(string[] args)
-		{
-			GetData();
-		}
+		private static void Main(string[] args) => GetData();
 
 		private static void GetData()
 		{
-			using ExcelWorkbook msx = new ExcelWorkbook(@"C:\Citrix\Sage Monthly Process Checklist_Final.xlsx");
-			using ExcelSheet wss = new ExcelSheet(msx.Workbook, "Sheet1");
-			var id = 1;
+		//	using ExcelWorkbook msx = new ExcelWorkbook(@"C:\Citrix\Sage Monthly Process Checklist_Final.xlsx");
+			using ExcelSheet wss = new ExcelSheet(@"C:\Citrix\Sage Monthly Process Checklist_Final.xlsx", "Sheet1");
+			int id = 1;
 			DataSet feedbackTables;
 			feedbackTables = new DataSet("Personnel Feedback");
 			GetReportInfo(wss, id, feedbackTables);
 			GetPAInformation(wss, id, feedbackTables);
 			GetAMInformation(wss, id, feedbackTables);
+			wss.Dispose();
+			WriteData(feedbackTables);
 		}
 		private static void WriteData(DataSet feedbackTables)
 		{
 			feedbackTables.Tables["Info"].Merge(feedbackTables.Tables["FeedBackAM"]);
 			feedbackTables.Tables["Info"].Merge(feedbackTables.Tables["FeedBackPA"]);
-			using ExcelWorkbook sms = new ExcelWorkbook("FeedBackReport.xlsx", "");
-			using ExcelSheet sw = new ExcelSheet(sms.Workbook, "FeedBackReport");
-			sw.WriteDatatableToRange(1, 1, feedbackTables.Tables["Info"]);
-			sms.Workbook.Save();
+			using ExcelSheet sw = new ExcelSheet("FeedBackReport.xlsx", "kont");
+			sw.Save();
+			//sw.WriteDatatableToRange(1, 1, feedbackTables.Tables["Info"]);
 		}
 		//Report Gather info
 		private static void GetAMInformation(ExcelSheet wss, int id, DataSet feedbackTables)
 		{
-			Microsoft.Office.Interop.Excel.Worksheet ws = wss.Worksheet; 
-			var amRows = wss.FindDataRows("PA (To rate AM) ", 2);
+			Microsoft.Office.Interop.Excel.Worksheet ws = wss.Worksheet;
+			int[] amRows = wss.FindDataRows("PA (To rate AM) ", 2);
 			DataTable AccountManagers = new DataTable("FeedBackAM");
 			AccountManagers.Columns.Add("Id", typeof(int));
 			AccountManagers.Columns.Add("Input Late");
@@ -62,7 +59,7 @@ namespace testactions
 		private static void GetPAInformation(ExcelSheet wss, int id, DataSet feedbackTables)
 		{
 			Microsoft.Office.Interop.Excel.Worksheet ws = wss.Worksheet;
-			var paRows = wss.FindDataRows("AM (To rate PA) ", 2);
+			int[] paRows = wss.FindDataRows("AM (To rate PA) ", 2);
 			DataTable administrators = new DataTable("FeedBackPA");
 			administrators.Columns.Add("Id", typeof(int));
 			administrators.Columns.Add("Internal Error Free");
