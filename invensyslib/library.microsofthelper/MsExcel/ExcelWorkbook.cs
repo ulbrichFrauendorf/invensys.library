@@ -30,6 +30,8 @@ namespace library.microsofthelper.MsExcel
 				}
 				catch (Exception ex)
 				{
+					disposedValue = false;
+					Dispose(true);
 					throw new LocalSystemException("Could not open locked Excel file : " + filename, ex);
 				}
 			}
@@ -45,10 +47,11 @@ namespace library.microsofthelper.MsExcel
 				}
 				catch (Exception ex)
 				{
+					disposedValue = false;
+					Dispose(true);
 					throw new LocalSystemException("Could not create new Excel file : " + filename, ex);
 				}
 			}
-
 			Worksheets = Workbook.Worksheets;
 		}
 		public string Save(string filename, bool savePopupFlag = true, string password = "")
@@ -80,10 +83,7 @@ namespace library.microsofthelper.MsExcel
 			Workbook.SaveAs(Filename: xSaveName, FileFormat: fileFormat, CreateBackup: false, Password: password, ConflictResolution: XlSaveConflictResolution.xlLocalSessionChanges);
 			return xSaveName;
 		}
-		public void Save()
-		{
-			Workbook.Save();
-		}
+		public void Save() => Workbook.Save();
 
 		#region IDisposable Support
 		private bool disposedValue = false; // To detect redundant calls

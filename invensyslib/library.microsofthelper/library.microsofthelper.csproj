@@ -16,12 +16,18 @@
     <RepositoryType>Public</RepositoryType>
     <PackageTags>Excel, Exchange, AzureAD</PackageTags>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-    <Version>1.0.0.2</Version>
+    <Version>1.0.1.0</Version>
+    <AssemblyVersion>1.0.1.0</AssemblyVersion>
+    <FileVersion>1.0.1.0</FileVersion>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
     <OutputPath>C:\Program Files (x86)\Common Files\Invensys\library.microsofthelper\</OutputPath>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="MsExcel\ExcelReportFormat.cs" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="invensys.library.common" Version="1.0.0.1" />

@@ -1,8 +1,6 @@
 ﻿using library.common;
 using System;
-using System.Collections.Generic;
-using System.Text;
-
+using Marshal = System.Runtime.InteropServices.Marshal;
 namespace library.microsofthelper.MsExcel
 {
 	public static class Cleanup
@@ -11,7 +9,9 @@ namespace library.microsofthelper.MsExcel
 		{
 			try
 			{
-				System.Runtime.InteropServices.Marshal.ReleaseComObject(obj);
+				if (obj != null && Marshal.IsComObject(obj))
+					Marshal.ReleaseComObject(obj);
+
 				obj = null;
 			}
 			catch (Exception ex)
