@@ -1,5 +1,4 @@
 ﻿using library.microsofthelper.MsExcel;
-using System;
 using System.Data;
 using Range = Microsoft.Office.Interop.Excel.Range;
 
@@ -11,7 +10,7 @@ namespace testactions
 
 		private static void GetData()
 		{
-		//	using ExcelWorkbook msx = new ExcelWorkbook(@"C:\Citrix\Sage Monthly Process Checklist_Final.xlsx");
+			//	using ExcelWorkbook msx = new ExcelWorkbook(@"C:\Citrix\Sage Monthly Process Checklist_Final.xlsx");
 			using ExcelSheet wss = new ExcelSheet(@"C:\Citrix\Sage Monthly Process Checklist_Final.xlsx", "Sheet1");
 			int id = 1;
 			DataSet feedbackTables;
@@ -19,16 +18,20 @@ namespace testactions
 			GetReportInfo(wss, id, feedbackTables);
 			GetPAInformation(wss, id, feedbackTables);
 			GetAMInformation(wss, id, feedbackTables);
-			wss.Dispose();
 			WriteData(feedbackTables);
+			wss.Dispose();
 		}
 		private static void WriteData(DataSet feedbackTables)
 		{
 			feedbackTables.Tables["Info"].Merge(feedbackTables.Tables["FeedBackAM"]);
 			feedbackTables.Tables["Info"].Merge(feedbackTables.Tables["FeedBackPA"]);
-			using ExcelSheet sw = new ExcelSheet("FeedBackReport.xlsx", "kont");
-			sw.Save();
-			//sw.WriteDatatableToRange(1, 1, feedbackTables.Tables["Info"]);
+			using (ExcelSheet sw = new ExcelSheet("FeedBackReport.xlsx", "kont"))
+			{
+				sw.Data.WriteDatatableToRange(1, 1, feedbackTables.Tables["Info"]);
+				sw.Formatting.UseStandardFormatting();
+				sw.Save();
+			}
+
 		}
 		//Report Gather info
 		private static void GetAMInformation(ExcelSheet wss, int id, DataSet feedbackTables)
