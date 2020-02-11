@@ -29,24 +29,23 @@ namespace library.common
 		}
 
 		public void FireWindowsLog(ApplicationEventType eventType, string customMessage = "")
-
 		{
 			switch (eventType)
 			{
 				case ApplicationEventType.Started:
-					outsEventLog.WriteEntry("Application started - " + customMessage, EventLogEntryType.Information, STARTED);
+					outsEventLog.WriteEntry("Started;" + customMessage, EventLogEntryType.Information, STARTED);
 					break;
 
 				case ApplicationEventType.Running:
-					outsEventLog.WriteEntry("Application running - " + customMessage, EventLogEntryType.Information, RUNNING);
+					outsEventLog.WriteEntry("Running;" + customMessage, EventLogEntryType.Information, RUNNING);
 					break;
 
 				case ApplicationEventType.Stopped:
-					outsEventLog.WriteEntry("Application stopped - " + customMessage, EventLogEntryType.Information, STOPPED);
+					outsEventLog.WriteEntry("Stopped;" + customMessage, EventLogEntryType.Information, STOPPED);
 					break;
 
 				case ApplicationEventType.Error:
-					outsEventLog.WriteEntry("Application ERROR   - " + customMessage, EventLogEntryType.Error, ERRORED);
+					outsEventLog.WriteEntry("Error;" + customMessage, EventLogEntryType.Error, ERRORED);
 					break;
 
 				default:
@@ -71,11 +70,15 @@ namespace library.common
 			switch (eventType)
 			{
 				case InternalProcessEventType.Success:
-					WriteTextEntry("Success -> " + customMessage + Environment.NewLine);
+					WriteTextEntry("Success;" + customMessage + Environment.NewLine);
 					break;
 
 				case InternalProcessEventType.Failure:
-					WriteTextEntry("Failure -> " + customMessage + Environment.NewLine);
+					WriteTextEntry("Failure;" + customMessage + Environment.NewLine);
+					break;
+
+				case InternalProcessEventType.None:
+					WriteTextEntry(customMessage + Environment.NewLine);
 					break;
 
 				default:
@@ -85,6 +88,6 @@ namespace library.common
 
 		private void WriteTextEntry(string v) => File.AppendAllText(outsArchiveLogFile, v);
 
-		public enum InternalProcessEventType { Success, Failure, }
+		public enum InternalProcessEventType { Success, Failure, None }
 	}
 }
